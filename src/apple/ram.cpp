@@ -16,15 +16,17 @@
 namespace hwinfo {
 
 // _____________________________________________________________________________________________________________________
-uint64_t getMemSize() {
-  uint64_t memSize = 0;
+int64_t getMemSize() {
+  uint64_t memSize;
   size_t size = sizeof(memSize);
+  int res;
 
-  if (sysctlbyname("hw.memsize", &memSize, &size, nullptr, 0) == 0) {
-    return memSize;
+  res = sysctlbyname("hw.memsize", &memSize, &size, nullptr, 0);
+  if (res < 0) {
+    return -1;
   }
 
-  return 0;
+  return memSize;
 }
 
 // _____________________________________________________________________________________________________________________
