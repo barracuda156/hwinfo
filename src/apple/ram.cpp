@@ -7,21 +7,24 @@
 
 #include <hwinfo/ram.h>
 #include <sys/sysctl.h>
+#include <mach/mach_host.h>
+#include <mach/mach.h>
+#include <unistd.h>
 
 #include <string>
 
 namespace hwinfo {
 
 // _____________________________________________________________________________________________________________________
-int64_t getMemSize() {
-  int64_t memSize;
+uint64_t getMemSize() {
+  uint64_t memSize = 0;
   size_t size = sizeof(memSize);
 
   if (sysctlbyname("hw.memsize", &memSize, &size, nullptr, 0) == 0) {
     return memSize;
   }
 
-  return -1;
+  return 0;
 }
 
 // _____________________________________________________________________________________________________________________
@@ -40,20 +43,23 @@ Memory::Memory() {
 
 // _____________________________________________________________________________________________________________________
 int64_t Memory::free_Bytes() const {
-  // TODO: implement
-  return -1;
+  mach_msg_type_number_t count = HOST_VM_INFO_COUNT;
+  vm_statistics_data_t vmstat;
+  kern_return_t ret = host_statistics(mach_host_self(), HOST_VM_INFO, (host_info_t)&vmstat, &count);
+  if (ret != KERN_SUCCESS) return 0;
+  uint64_t free = (uint64_t)vmstat.free_count * (uint64_t)sysconf(_SC_PAGESIZE);
+  return free;
 }
 
 // _____________________________________________________________________________________________________________________
 int64_t Memory::available_Bytes() const {
-  int64_t usableMemSize;
-  size_t size = sizeof(usableMemSize);
-
-  if (sysctlbyname("hw.memsize_usable", &usableMemSize, &size, nullptr, 0) == 0) {
-    return usableMemSize;
-  }
-
-  return -1;
+  mach_msg_type_number_t count = HOST_VM_INFO_COUNT;
+  vm_statistics_data_t vmstat;
+  kern_return_t ret = host_statistics(mach_host_self(), HOST_VM_INFO, (host_info_t)&vmstat, &count);
+  if (ret != KERN_SUCCESS) return 0;
+  uint64_t free = (uint64_t)vmstat.free_count * (uint64_t)sysconf(_SC_PAGESIZE);
+  uint64_t inactive = (uint64_t)vmstat.inactive_count * (uint64_t)sysconf(_SC_PAGESIZE);
+  return free + inactive;
 }
 
 }  // namespace hwinfo
